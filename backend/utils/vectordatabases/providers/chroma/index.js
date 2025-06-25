@@ -145,30 +145,36 @@ class Chroma {
     return !!collection;
   }
 
-  async rawGet(collectionId, pageSize = 10, offset = 0) {
-    return await fetch(
-      `${this.config.settings.instanceURL}/api/v1/collections/${collectionId}/get`,
-      {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "Content-Type": "application/json",
-          ...this.#appendRawAuthHeaders(),
-        },
-        body: JSON.stringify({
-          limit: pageSize,
-          offset: offset,
-          include: ["embeddings", "documents", "metadatas"],
-        }),
-      }
-    )
-      .then((res) => res.json())
-      .then((res) => res)
-      .catch((error) => {
-        console.error(e.message);
-        return { ids: [], embeddings: [], metadatas: [], documents: [], error };
+    async rawGet(collectionId, pageSize = 10, offset = 0) {
+    try {
+      const { client } = await this.connect();
+      const collection = await client.getCollection({ name: collectionId });
+
+      const result = await collection.get({
+        limit: pageSize,
+        offset,
+        include: ["embeddings", "documents", "metadatas"],
       });
+
+      return {
+        ids: result.ids || [],
+        embeddings: result.embeddings || [],
+        metadatas: result.metadatas || [],
+        documents: result.documents || [],
+        error: null,
+      };
+    } catch (error) {
+      console.error("rawGet error:", error.message);
+      return {
+        ids: [],
+        embeddings: [],
+        metadatas: [],
+        documents: [],
+        error,
+      };
+    }
   }
+
 
   // Split, embed, and save a given document data that we get from the document processor
   // API.
